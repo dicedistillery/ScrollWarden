@@ -25,10 +25,11 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const renderedScaleRef = useRef<number | null>(null);
   const renderTaskRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
 
   const renderPage = useCallback(async () => {
-    if (!canvasRef.current || isRendering) return;
-    
+    if (!canvasRef.current || isRendering || !isMountedRef.current) return;
+
     // Skip if already rendered at this scale
     if (renderedScaleRef.current === scale) return;
 
@@ -41,13 +42,13 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
     try {
       setIsRendering(true);
       console.log(`Rendering page ${pageNumber} at scale ${scale}`);
-      
+
       const page = await document.getPage(pageNumber);
       const pageViewport = page.getViewport({ scale });
-      
+
       const canvas = canvasRef.current;
-      if (!canvas) return;
-      
+      if (!canvas || !isMountedRef.current) return;
+
       const context = canvas.getContext('2d');
       if (!context) return;
 
@@ -63,11 +64,13 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
       // Render the page
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
-      
+
+      if (!isMountedRef.current) return;
+
       // Mark this scale as rendered
       renderedScaleRef.current = scale;
       renderTaskRef.current = null;
-      
+
       onPageRendered(pageNumber);
       console.log(`Page ${pageNumber} rendered successfully at scale ${scale}`);
     } catch (error: any) {
@@ -77,7 +80,9 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
         console.error(`Error rendering page ${pageNumber}:`, error);
       }
     } finally {
-      setIsRendering(false);
+      if (isMountedRef.current) {
+        setIsRendering(false);
+      }
     }
   }, [document, pageNumber, scale, onPageRendered, isRendering]);
 
@@ -87,6 +92,18 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
       renderPage();
     }
   }, [isVisible, scale, renderPage, isRendering]);
+
+  // Cleanup on unmount - cancel any pending render tasks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (renderTaskRef.current) {
+        console.log(`Cancelling render task for page ${pageNumber} on unmount`);
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
+  }, [pageNumber]);
 
   if (!isVisible && renderedScaleRef.current === null) {
     return (
@@ -138,7 +155,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [viewerState, setViewerState] = useState<PDFViewerState>({
     scale: 1.0,
     currentPage: 1,
@@ -146,7 +164,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
     pagesRendered: new Set(),
     scrollToPage: targetPage
   });
-  
+
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -154,15 +172,28 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
   // Load PDF document
   useEffect(() => {
+    let isMounted = true;
+    let currentDoc: PDFDocumentProxy | null = null;
+
     const loadPDF = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const arrayBuffer = await pdfFile.file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        
+
         const pdfDoc = await window.pdfjsLib.getDocument(uint8Array).promise;
+
+        if (!isMounted) {
+          // Component unmounted before PDF loaded, clean up
+          console.log('Component unmounted before PDF loaded, cleaning up');
+          await pdfDoc.cleanup();
+          await pdfDoc.destroy();
+          return;
+        }
+
+        currentDoc = pdfDoc;
         setDocument(pdfDoc);
         setViewerState(prev => ({
           ...prev,
@@ -170,15 +201,43 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
         }));
       } catch (err) {
         console.error('Error loading PDF:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     if (pdfFile && !pdfFile.isProcessing && !pdfFile.error) {
       loadPDF();
     }
+
+    // Cleanup function - destroy PDF document when switching PDFs or unmounting
+    return () => {
+      isMounted = false;
+      if (currentDoc) {
+        console.log(`Cleaning up PDF document: ${pdfFile.name}`);
+        currentDoc.cleanup().catch((err) => {
+          console.warn('Error during PDF cleanup:', err);
+        });
+        currentDoc.destroy().catch((err) => {
+          console.warn('Error during PDF destroy:', err);
+        });
+      }
+      // Also cleanup the document from state if it exists
+      if (document && document !== currentDoc) {
+        console.log('Cleaning up previous document from state');
+        document.cleanup().catch((err) => {
+          console.warn('Error during previous PDF cleanup:', err);
+        });
+        document.destroy().catch((err) => {
+          console.warn('Error during previous PDF destroy:', err);
+        });
+      }
+    };
   }, [pdfFile]);
 
   // Set up intersection observer for lazy loading
@@ -190,19 +249,26 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
       observerRef.current.disconnect();
     }
 
-    let debounceTimer: NodeJS.Timeout;
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         // Debounce updates to prevent excessive re-renders
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
           let hasChanges = false;
           const newVisiblePages = new Set(visiblePages);
-          
+
           entries.forEach((entry) => {
             const pageNumber = parseInt(entry.target.getAttribute('data-page-number') || '0');
-            
+
             if (entry.isIntersecting) {
               // Only add current page and immediate neighbors
               for (let i = Math.max(1, pageNumber - 1); i <= Math.min(viewerState.totalPages, pageNumber + 1); i++) {
@@ -213,7 +279,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
               }
             }
           });
-          
+
           if (hasChanges) {
             setVisiblePages(newVisiblePages);
           }
@@ -221,11 +287,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
           // Update current page based on which page is most visible
           const visibleEntries = entries.filter(entry => entry.isIntersecting);
           if (visibleEntries.length > 0) {
-            const mostVisibleEntry = visibleEntries.reduce((prev, current) => 
+            const mostVisibleEntry = visibleEntries.reduce((prev, current) =>
               prev.intersectionRatio > current.intersectionRatio ? prev : current
             );
             const currentPageNumber = parseInt(mostVisibleEntry.target.getAttribute('data-page-number') || '1');
-            
+
             setViewerState(prev => {
               if (prev.currentPage !== currentPageNumber) {
                 return { ...prev, currentPage: currentPageNumber };
@@ -250,7 +316,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
     });
 
     return () => {
-      clearTimeout(debounceTimer);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
@@ -261,7 +330,29 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
     const cleanup = setupIntersectionObserver();
     return cleanup;
   }, [setupIntersectionObserver]);
-  
+
+  // Global cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('PDFViewer unmounting, performing final cleanup');
+
+      // Clear debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+
+      // Disconnect observer
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+
+      // Clear page refs
+      pageRefs.current.clear();
+    };
+  }, []);
+
   // When scale changes, force update visible pages to trigger re-render
   useEffect(() => {
     if (document && visiblePages.size > 0) {
