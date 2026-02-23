@@ -107,14 +107,15 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
 
   if (!isVisible && renderedScaleRef.current === null) {
     return (
-      <div 
-        className="flex items-center justify-center bg-gray-100 border-b border-gray-200"
-        style={{ height: 800 }} // Default height
+      <div
+        className="flex justify-center p-8 bg-slate-50/50 min-h-[800px]"
       >
-        <div className="text-center text-gray-500">
-          <div className="animate-pulse">
-            <div className="w-16 h-16 bg-gray-300 rounded-lg mx-auto mb-2"></div>
-            <p className="text-sm">Page {pageNumber}</p>
+        <div className="w-full max-w-[800px] bg-white rounded-xl shadow-sm border border-slate-200 animate-pulse flex items-center justify-center">
+          <div className="text-center text-slate-400">
+            <svg className="w-12 h-12 mx-auto mb-3 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm font-medium">Loading Page {pageNumber}</p>
           </div>
         </div>
       </div>
@@ -122,25 +123,25 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
   }
 
   return (
-    <div className="flex justify-center bg-gray-100 border-b border-gray-200 p-4 flex-shrink-0">
-      <div className="relative bg-white shadow-lg max-w-full">
+    <div className="flex justify-center bg-slate-50/50 p-6 md:p-8 flex-shrink-0">
+      <div className="relative group bg-white shadow-xl shadow-slate-200/50 rounded-lg ring-1 ring-slate-200 max-w-full overflow-hidden transition-shadow duration-300 hover:shadow-2xl hover:shadow-slate-300/50">
         {/* Page number overlay */}
-        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs font-medium">
-          {pageNumber}
+        <div className="absolute top-4 right-4 bg-slate-800/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold shadow-sm z-10 transition-opacity opacity-0 hover:opacity-100 group-hover:opacity-100">
+          Page {pageNumber}
         </div>
-        
+
         {isRendering && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
-            <div className="text-center">
-              <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Rendering page {pageNumber}...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-20">
+            <div className="text-center bg-white p-4 rounded-xl shadow-lg border border-slate-100">
+              <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+              <p className="text-sm font-medium text-slate-600">Rendering...</p>
             </div>
           </div>
         )}
-        
+
         <canvas
           ref={canvasRef}
-          className={`block ${isRendering ? 'opacity-50' : ''}`}
+          className={`block transition-opacity duration-300 ${isRendering ? 'opacity-40' : 'opacity-100'}`}
           style={{
             maxWidth: '100%',
             height: 'auto'
@@ -362,58 +363,58 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
       setVisiblePages(new Set(visiblePages));
     }
   }, [viewerState.scale]);
-  
+
 
   // Handle target page scrolling
   useEffect(() => {
     if (targetPage && document && containerRef.current) {
       console.log(`Attempting to navigate to page ${targetPage}`);
-      
+
       const scrollToTargetPage = () => {
         const pageElement = pageRefs.current.get(targetPage);
         if (pageElement) {
           console.log(`Found page element for page ${targetPage}, scrolling...`);
-          
+
           // Temporarily disable the intersection observer to prevent interference
           if (observerRef.current) {
             observerRef.current.disconnect();
           }
-          
+
           // Scroll to the target page
-          pageElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          pageElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
           });
-          
+
           // Update the current page indicator
           setViewerState(prev => ({
             ...prev,
             currentPage: targetPage
           }));
-          
+
           // Re-enable intersection observer after scrolling
           setTimeout(() => {
             // Re-setup the entire intersection observer
             setupIntersectionObserver();
           }, 1000);
-          
+
           console.log(`Successfully navigated to page ${targetPage}`);
         } else {
           console.warn(`Page element for page ${targetPage} not found in pageRefs. Available pages:`, Array.from(pageRefs.current.keys()));
-          
+
           // Try multiple fallback approaches
           // 1. Try to find the page element by data attribute
           const pageElementBySelector = containerRef.current?.querySelector(`[data-page-number="${targetPage}"]`) as HTMLDivElement;
           if (pageElementBySelector) {
             console.log(`Found page element by selector for page ${targetPage}`);
-            pageElementBySelector.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
+            pageElementBySelector.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
             });
             setViewerState(prev => ({ ...prev, currentPage: targetPage }));
             return;
           }
-          
+
           // 2. If the page element isn't ready, try scrolling by calculating position
           console.log(`Falling back to estimated position for page ${targetPage}`);
           if (containerRef.current) {
@@ -433,7 +434,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
           console.error(`Failed to scroll to page ${targetPage} after 5 attempts`);
           return;
         }
-        
+
         const delay = attempt * 300; // 300ms, 600ms, 900ms, etc.
         setTimeout(() => {
           const pageElement = pageRefs.current.get(targetPage);
@@ -445,7 +446,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
           }
         }, delay);
       };
-      
+
       tryScroll();
     }
   }, [targetPage, document, pageRefs]);
@@ -514,11 +515,17 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-700">Loading PDF...</p>
-          <p className="text-sm text-gray-500">{pdfFile.name}</p>
+      <div className="flex-1 flex items-center justify-center bg-slate-50/50">
+        <div className="text-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100 max-w-sm w-full mx-4">
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center text-primary-500">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+          </div>
+          <p className="text-lg font-semibold text-slate-800 mb-2">Loading Document</p>
+          <p className="text-sm text-slate-500 truncate" title={pdfFile.name}>{pdfFile.name}</p>
         </div>
       </div>
     );
@@ -526,11 +533,13 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-6xl mb-4 text-red-400">⚠️</div>
-          <p className="text-lg font-medium text-red-700 mb-2">Failed to load PDF</p>
-          <p className="text-sm text-gray-600">{error}</p>
+      <div className="flex-1 flex items-center justify-center bg-slate-50/50">
+        <div className="text-center bg-white p-8 rounded-3xl shadow-sm border border-red-100 max-w-sm w-full mx-4">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+          <p className="text-lg font-semibold text-slate-800 mb-2">Failed to load PDF</p>
+          <p className="text-sm text-slate-500">{error}</p>
         </div>
       </div>
     );
@@ -538,60 +547,69 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
   if (!document) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-slate-50/50">
         <div className="text-center">
-          <div className="text-6xl mb-4">📄</div>
-          <p className="text-lg text-gray-600">No PDF loaded</p>
+          <div className="w-20 h-20 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+          </div>
+          <p className="text-lg font-medium text-slate-600">No Document Loaded</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-slate-50/50">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-3.5 bg-white/60 backdrop-blur-md border-b border-slate-200/60 shadow-sm flex-shrink-0 z-10">
         <div className="flex items-center space-x-4">
-          <h3 className="text-lg font-medium text-gray-800 truncate max-w-md" title={pdfFile.name}>
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600 shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-base font-semibold text-slate-800 truncate max-w-md" title={pdfFile.name}>
             {pdfFile.name}
           </h3>
         </div>
-        
-        <div className="flex items-center space-x-4">
+
+        <div className="flex items-center space-x-6">
           {/* Page indicator */}
-          <div className="text-sm text-gray-600 font-medium">
-            Page {viewerState.currentPage} of {viewerState.totalPages}
+          <div className="flex items-center space-x-1 text-sm font-medium bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+            <span className="text-slate-700">{viewerState.currentPage}</span>
+            <span className="text-slate-400">/</span>
+            <span className="text-slate-500">{viewerState.totalPages}</span>
           </div>
-          
+
           {/* Zoom controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 bg-white border border-slate-200 rounded-lg shadow-sm p-1">
             <button
               onClick={zoomOut}
               disabled={viewerState.scale <= 0.5}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 text-slate-600 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
               title="Zoom out"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H9" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H9" />
               </svg>
             </button>
-            
+
             <button
               onClick={resetZoom}
-              className="px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded min-w-[4rem]"
+              className="px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md min-w-[3.5rem] transition-colors"
               title="Reset zoom"
             >
               {Math.round(viewerState.scale * 100)}%
             </button>
-            
+
             <button
               onClick={zoomIn}
               disabled={viewerState.scale >= 3.0}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 text-slate-600 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
               title="Zoom in"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 10l-2 0m0 0l-2 0m2 0v2m0-2v-2" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 10l-2 0m0 0l-2 0m2 0v2m0-2v-2" />
               </svg>
             </button>
           </div>
@@ -599,7 +617,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
       </div>
 
       {/* PDF Pages */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-y-auto min-h-0"
         style={{ scrollBehavior: 'smooth' }}

@@ -59,19 +59,19 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
   // Handle resize functionality
   const handleResizeStart = useCallback((event: React.MouseEvent) => {
     if (collapsed) return;
-    
+
     setIsDragging(true);
     const rect = sidebarRef.current?.getBoundingClientRect();
     if (rect) {
       setDragOffset(event.clientX - rect.right);
     }
-    
+
     event.preventDefault();
   }, [collapsed]);
 
   const handleResizeMove = useCallback((event: MouseEvent) => {
     if (!isDragging) return;
-    
+
     const rect = sidebarRef.current?.getBoundingClientRect();
     if (rect) {
       const newWidth = event.clientX - rect.left - dragOffset;
@@ -117,22 +117,21 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
   return (
     <div
       ref={sidebarRef}
-      className={`relative bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col ${
-        collapsed ? 'w-12' : ''
-      }`}
+      className={`relative bg-slate-50/40 backdrop-blur-sm border-r border-slate-200/60 transition-all duration-300 ease-in-out flex flex-col z-20 ${collapsed ? 'w-12' : ''
+        }`}
       style={{ width: collapsed ? 48 : width }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200/60">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <h2 className="text-lg font-semibold text-gray-800">PDF Documents</h2>
+            <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">Documents</h2>
             {pdfFiles.length > 0 && (
               <button
                 onClick={onClearAll}
-                className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                 title="Clear all PDFs"
               >
                 Clear All
@@ -142,15 +141,15 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
         )}
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-slate-200/50 text-slate-500 hover:text-slate-700 transition-all"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           ) : (
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           )}
@@ -162,11 +161,15 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
           {/* PDF List */}
           <div className="flex-1 overflow-y-auto p-2">
             {pdfFiles.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
-                <div className="text-4xl mb-3">📚</div>
-                <p className="text-sm mb-4">No PDFs uploaded yet</p>
-                <p className="text-xs text-gray-400">
-                  Drop PDF files here or use the upload button below
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 px-4 mt-8">
+                <div className="w-16 h-16 mb-4 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center animate-fade-in">
+                  <svg className="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-slate-700 mb-2">No documents</p>
+                <p className="text-xs text-slate-500 text-center">
+                  Upload your PDFs to start analyzing and querying them.
                 </p>
               </div>
             ) : (
@@ -175,31 +178,35 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
                   <div
                     key={pdf.id}
                     className={`
-                      group relative p-3 rounded-lg border transition-all duration-200
+                      group relative p-3 rounded-xl border transition-all duration-300 backdrop-blur-sm
                       ${activePdfId === pdf.id
-                        ? 'border-blue-500 bg-blue-50 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-primary-300 bg-white shadow-sm ring-1 ring-primary-500/20'
+                        : 'border-transparent hover:border-slate-200 hover:bg-white/80'
                       }
                       ${pdf.isProcessing || pdf.error ? 'opacity-75' : ''}
                     `}
                   >
-                    <div 
+                    <div
                       onClick={() => !pdf.isProcessing && !pdf.error && onPDFSelect(pdf.id)}
                       className={`${pdf.isProcessing || pdf.error ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0 pr-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="text-2xl">📄</div>
+                          <div className="flex items-center space-x-3">
+                            <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${activePdfId === pdf.id ? 'bg-primary-50 text-primary-600' : 'bg-slate-100 text-slate-400 group-hover:text-primary-500'} transition-colors duration-300`}>
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                              </svg>
+                            </div>
                             <div className="flex-1 min-w-0">
                               <p
-                                className="text-sm font-medium text-gray-900 truncate"
+                                className={`text-sm font-medium truncate transition-colors ${activePdfId === pdf.id ? 'text-primary-900' : 'text-slate-700'}`}
                                 title={pdf.name}
                               >
                                 {pdf.name}
                               </p>
                               {pdf.pages > 0 && (
-                                <p className="text-xs text-gray-500">
+                                <p className={`text-xs mt-0.5 transition-colors ${activePdfId === pdf.id ? 'text-primary-600/80' : 'text-slate-500'}`}>
                                   {pdf.pages} pages • {formatFileSize(pdf.file.size)}
                                 </p>
                               )}
@@ -220,17 +227,17 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Remove button - appears on hover */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onPDFRemove(pdf.id);
                       }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-all duration-200 shadow-sm"
+                      className="absolute top-1/2 -translate-y-1/2 right-3 opacity-0 group-hover:opacity-100 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 border border-slate-200 rounded-full w-7 h-7 flex items-center justify-center transition-all duration-200 shadow-sm"
                       title="Remove PDF"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -241,17 +248,20 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
           </div>
 
           {/* Upload Section */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-slate-200/60 bg-slate-50/30">
             <button
               onClick={handleUploadClick}
-              className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="group relative w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl bg-white/60 hover:bg-white hover:border-primary-400 hover:shadow-sm transition-all duration-300 mt-2"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Upload PDF
+              <div className="p-2.5 bg-slate-100 group-hover:bg-primary-50 rounded-full mb-2.5 transition-colors duration-300">
+                <svg className="w-5 h-5 text-slate-500 group-hover:text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+              </div>
+              <span className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Upload PDF</span>
+              <span className="text-xs text-slate-500 mt-1 text-center">Drag and drop files here</span>
             </button>
-            
+
             <input
               ref={fileInputRef}
               type="file"
@@ -260,10 +270,6 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
               onChange={handleFileChange}
               className="hidden"
             />
-
-            <p className="mt-2 text-xs text-gray-500 text-center">
-              Or drag and drop PDF files anywhere in this sidebar
-            </p>
           </div>
         </>
       )}
@@ -272,7 +278,7 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
       {!collapsed && (
         <div
           ref={resizeRef}
-          className="absolute top-0 right-0 w-1 h-full resize-handle hover:bg-blue-500 transition-colors cursor-col-resize"
+          className="absolute top-0 right-0 w-1.5 h-full resize-handle hover:bg-primary-400 transition-colors cursor-col-resize z-50"
           onMouseDown={handleResizeStart}
         />
       )}

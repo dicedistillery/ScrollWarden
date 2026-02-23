@@ -327,8 +327,9 @@ export const App: React.FC = () => {
   const hasProcessedPDFs = appState.pdfFiles.some(pdf => !pdf.isProcessing && !pdf.error);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+    <div className="flex h-screen w-full sm:p-4 lg:p-6 xl:p-8">
+      <div className="flex flex-1 w-full h-full bg-white/80 backdrop-blur-xl sm:rounded-3xl shadow-2xl sm:border border-white/50 overflow-hidden relative">
+        {/* Sidebar */}
       <PDFManagerSidebar
         pdfFiles={appState.pdfFiles}
         activePdfId={appState.activePdfId}
@@ -350,7 +351,7 @@ export const App: React.FC = () => {
         ) : (
           <div className="flex-1 flex h-full min-h-0">
             {/* PDF Viewer */}
-            <div className="flex-1 bg-white border-r border-gray-200 h-full min-h-0">
+            <div className="flex-1 bg-white/50 border-r border-slate-200/60 z-10 h-full min-h-0">
               {activePdf ? (
                 <PDFViewer 
                   pdfFile={activePdf}
@@ -428,6 +429,7 @@ export const App: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

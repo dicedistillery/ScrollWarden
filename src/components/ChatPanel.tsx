@@ -32,10 +32,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick 
       <div className={`max-w-[85%] w-full`}>
         <div
           className={`
-            px-3 py-2 rounded-lg shadow-sm
-            ${isUser 
-              ? 'bg-blue-500 text-white rounded-br-sm ml-auto' 
-              : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm mr-auto'
+            px-4 py-3 shadow-sm transition-all duration-300
+            ${isUser
+              ? 'bg-primary-600 text-white rounded-2xl rounded-br-sm ml-auto shadow-primary-500/20'
+              : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm mr-auto shadow-slate-200/50'
             }
           `}
         >
@@ -44,15 +44,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick 
           ) : (
             <MarkdownRenderer content={message.content} isUserMessage={false} />
           )}
-          
+
           {message.citation && (
-            <div className="mt-2 pt-2 border-t border-blue-400">
+            <div className={`mt-3 pt-3 border-t ${isUser ? 'border-primary-400/50' : 'border-slate-100'}`}>
               <button
                 onClick={() => {
                   console.log(`Citation clicked: ${message.citation!.documentName}, Page ${message.citation!.pageNumber}`);
                   handleCitationClick(message.citation!);
                 }}
-                className="citation-button inline-flex items-center px-2 py-1 bg-blue-600 bg-opacity-20 hover:bg-opacity-30 hover:bg-blue-700 active:bg-blue-800 rounded text-xs font-medium transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+                className={`citation-button inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] ${isUser
+                    ? 'bg-white/20 hover:bg-white/30 text-white'
+                    : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                  }`}
                 title="Click to navigate to this page in the PDF"
               >
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +66,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick 
             </div>
           )}
         </div>
-        
+
         <div className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
           {formatTimestamp(message.timestamp)}
         </div>
@@ -76,15 +79,14 @@ const ThinkingIndicator: React.FC = () => {
   return (
     <div className="flex justify-start mb-3">
       <div className="max-w-[85%]">
-        <div className="bg-white border border-gray-200 text-gray-800 rounded-lg rounded-bl-sm px-3 py-2 shadow-sm mr-auto">
-          <div className="flex items-center space-x-1">
-            <span className="text-sm text-gray-600">AI is thinking</span>
-            <div className="thinking-dots text-gray-600"></div>
-          </div>
-          <div className="flex space-x-1 mt-2">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+        <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm shadow-slate-200/50 mr-auto">
+          <div className="flex items-center space-x-2">
+            <div className="flex space-x-1.5 shrink-0">
+              <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+            <span className="text-sm font-medium text-slate-500">AI is thinking</span>
           </div>
         </div>
       </div>
@@ -120,7 +122,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSubmit = useCallback(() => {
     if (!inputValue.trim() || !canSubmit || isAiThinking) return;
-    
+
     onSubmit(inputValue);
     setInputValue('');
   }, [inputValue, canSubmit, isAiThinking, onSubmit]);
@@ -141,17 +143,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center space-x-2">
-          <h3 className="text-lg font-semibold text-gray-800">AI Assistant</h3>
-          <AIProviderSelector />
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-white/50 backdrop-blur-sm z-10 shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-500 to-indigo-400 flex items-center justify-center text-white shadow-sm shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 className="text-base font-semibold text-slate-800">AI Assistant</h3>
+          <div className="ml-2">
+            <AIProviderSelector />
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
           <div className={`
             w-2 h-2 rounded-full
-            ${isAiThinking ? 'bg-yellow-400 animate-pulse' : canSubmit ? 'bg-green-400' : 'bg-gray-400'}
+            ${isAiThinking ? 'bg-amber-400 animate-pulse' : canSubmit ? 'bg-emerald-400' : 'bg-slate-300'}
           `}></div>
-          <span className="text-xs text-gray-600 font-medium">
+          <span className="text-xs text-slate-600 font-medium">
             {isAiThinking ? 'Processing...' : canSubmit ? 'Ready' : 'No PDFs'}
           </span>
         </div>
@@ -160,16 +169,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0">
         {messages.length === 0 && !isAiThinking ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-6xl mb-4">💬</div>
-            <p className="text-lg font-medium text-gray-700 mb-2">Ready to help!</p>
-            <p className="text-sm text-gray-500 max-w-xs">
-              Upload a PDF and ask me questions about its content. I'll provide answers with citations to the exact pages.
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-fade-in">
+            <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-5 shadow-sm border border-primary-100">
+              <svg className="w-8 h-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-slate-800 mb-2">How can I help you today?</p>
+            <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
+              Ask me any question about your uploaded documents, and I'll find the answers for you.
             </p>
             {!canSubmit && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  Please upload and wait for PDFs to be processed before asking questions.
+              <div className="mt-6 p-4 bg-amber-50 border border-amber-200/60 rounded-xl shadow-sm">
+                <p className="text-sm font-medium text-amber-800">
+                  Upload and process PDFs to get started.
                 </p>
               </div>
             )}
@@ -183,71 +196,73 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 onCitationClick={onCitationClick}
               />
             ))}
-            
+
             {isAiThinking && <ThinkingIndicator />}
           </>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-3">
-        <div className="flex space-x-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={() => setIsComposing(false)}
-              placeholder={
-                !canSubmit 
-                  ? "Upload a PDF to start asking questions..." 
-                  : isAiThinking
+      <div className="border-t border-slate-200/60 p-4 bg-white/50 backdrop-blur-sm shrink-0">
+        <div className="relative flex items-end shadow-sm bg-white border border-slate-300 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-400 rounded-2xl transition-all duration-300">
+          <textarea
+            ref={textareaRef}
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
+            placeholder={
+              !canSubmit
+                ? "Upload a PDF to start asking questions..."
+                : isAiThinking
                   ? "AI is processing your request..."
-                  : "Ask a question about your PDFs... (Enter to send, Shift+Enter for new line)"
-              }
-              disabled={isInputDisabled}
-              className={`
-                w-full px-3 py-2 border border-gray-300 rounded-lg resize-none
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
-                placeholder:text-gray-400
-                min-h-[2.5rem] max-h-[7.5rem]
-              `}
-              rows={1}
-            />
-          </div>
-          
-          <button
-            onClick={handleSubmit}
-            disabled={!inputValue.trim() || isInputDisabled}
-            className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              ${(!inputValue.trim() || isInputDisabled)
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 shadow-sm hover:shadow-md'
-              }
-            `}
-            title={
-              !canSubmit 
-                ? "Upload and process PDFs first"
-                : isAiThinking 
-                ? "Please wait for AI response"
-                : "Send message"
+                  : "Ask a question about your PDFs..."
             }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
+            disabled={isInputDisabled}
+            className={`
+              w-full px-4 py-3.5 bg-transparent border-none resize-none outline-none
+              disabled:opacity-60 disabled:cursor-not-allowed
+              placeholder:text-slate-400 text-slate-700
+              min-h-[3rem] max-h-[10rem] rounded-2xl
+            `}
+            rows={1}
+            style={{ lineHeight: '1.5' }}
+          />
+
+          <div className="p-2 shrink-0">
+            <button
+              onClick={handleSubmit}
+              disabled={!inputValue.trim() || isInputDisabled}
+              className={`
+                flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300
+                ${(!inputValue.trim() || isInputDisabled)
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md hover:shadow-primary-500/20 active:scale-95'
+                }
+              `}
+              title={
+                !canSubmit
+                  ? "Upload and process PDFs first"
+                  : isAiThinking
+                    ? "Please wait for AI response"
+                    : "Send message"
+              }
+            >
+              <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          </div>
         </div>
-        
-        <div className="mt-2 text-xs text-gray-500">
-          {canSubmit && !isAiThinking && (
+
+        <div className="mt-2.5 text-xs text-center text-slate-400">
+          {canSubmit && !isAiThinking ? (
             <span>💡 I'll search through your PDFs and provide answers with page citations</span>
+          ) : (
+            <span className="invisible">Space</span>
           )}
         </div>
       </div>

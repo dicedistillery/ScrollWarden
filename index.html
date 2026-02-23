@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scroll Warden</title>
     
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- TailwindCSS from CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -13,11 +18,30 @@
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                            950: '#1e1b4b',
+                        }
+                    },
                     animation: {
-                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'fade-in': 'fadeIn 0.3s ease-in-out',
-                        'slide-in-right': 'slideInRight 0.3s ease-out',
-                        'bounce-gentle': 'bounce 1s infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.4s ease-out',
+                        'slide-in-right': 'slideInRight 0.4s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'bounce-gentle': 'bounce 2s infinite',
                     },
                     keyframes: {
                         fadeIn: {
@@ -25,8 +49,12 @@
                             '100%': { opacity: '1' }
                         },
                         slideInRight: {
-                            '0%': { transform: 'translateX(100%)', opacity: '0' },
+                            '0%': { transform: 'translateX(20px)', opacity: '0' },
                             '100%': { transform: 'translateX(0)', opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
                         }
                     }
                 }
@@ -53,27 +81,34 @@
         
         /* Custom scrollbar for better UX */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
+            background: transparent;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
+            background: #cbd5e1;
+            border-radius: 9999px;
+            border: 2px solid rgba(0,0,0,0);
+            background-clip: padding-box;
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            background: #94a3b8;
+            border: 2px solid rgba(0,0,0,0);
+            background-clip: padding-box;
         }
         
         /* Debug layout issues */
         body {
             overflow: hidden !important;
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(circle at 100% 0%, #e0e7ff 0%, transparent 40%),
+                radial-gradient(circle at 10% 100%, #f3e8ff 0%, transparent 40%);
         }
         
         #root {
@@ -138,7 +173,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans antialiased h-full">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased h-full selection:bg-primary-200 selection:text-primary-900">
     <div id="root" class="h-full"></div>
     
     <!-- Main application script -->
