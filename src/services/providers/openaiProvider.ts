@@ -14,7 +14,7 @@ export const openaiConfig: AIProviderConfig = {
  */
 async function callOpenAIAPI(question: string, pdfFiles: PDFFile[], apiKey: string): Promise<AIResponse> {
   const prompt = constructAIPrompt(question, pdfFiles);
-  
+
   try {
     const response = await fetch(openaiConfig.apiUrl, {
       method: 'POST',
@@ -27,7 +27,7 @@ async function callOpenAIAPI(question: string, pdfFiles: PDFFile[], apiKey: stri
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful document analyst. You analyze PDF documents and answer questions based strictly on their content. Always provide citations in the exact format: "Source: [Document Name], Page X"'
+            content: 'You are a knowledgeable AI assistant and expert document analyst. You help users by analyzing PDF documents, but you can also answer general questions using your broad knowledge base. If you use provided documents, provide citations in the exact format: "Source: [Document Name], Page X"'
           },
           {
             role: 'user',

@@ -6,6 +6,7 @@ A single-page web application that allows users to upload multiple PDF documents
 
 - **📚 Multiple PDF Support**: Upload and manage multiple PDF documents simultaneously
 - **🔍 AI-Powered Search**: Ask natural language questions about your PDF content
+- **🧠 Broad Knowledge Base**: The AI falls back to its general knowledge (e.g., D&D rules) when your documents don't have the answer
 - **📍 Precise Citations**: Get clickable citations that take you directly to the relevant page
 - **👁️ High-Performance PDF Viewer**: Custom-built viewer with lazy loading and zoom controls
 - **💬 Interactive Chat**: Intuitive chat interface with message history
@@ -142,11 +143,12 @@ The application supports multiple AI providers with easy switching between them:
 - **Canvas Rendering**: High-quality PDF rendering using HTML5 Canvas
 
 ### Chat Interface
-- **Message History**: Persistent conversation with timestamps
-- **Citation Buttons**: Clickable citations that navigate to PDF pages
+- **Message History**: Persistent conversation with timestamps that survives document deletions
+- **Citation Buttons**: Clickable citations that navigate to PDF pages (gracefully disables for deleted documents)
 - **Auto-resize Input**: Text area expands as you type
 - **Thinking Animation**: Visual feedback during AI processing
 - **Rich Text Rendering**: AI responses support markdown formatting (headers, lists, **bold**, *italic*, `code`)
+- **Smart Sourcing**: The AI clearly distinguishes between citing a document and drawing from general knowledge without hallucinating references.
 
 ### Sidebar Management
 - **Collapsible**: Hide/show sidebar with smooth animations

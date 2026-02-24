@@ -18,11 +18,11 @@ export function sanitizeUserInput(input: string): string {
   // Limit length to prevent abuse
   const maxLength = 1000;
   let sanitized = sanitizeText(input);
-  
+
   if (sanitized.length > maxLength) {
     sanitized = sanitized.substring(0, maxLength) + '...';
   }
-  
+
   return sanitized;
 }
 
@@ -33,27 +33,26 @@ export function sanitizeUserInput(input: string): string {
 export function constructAIPrompt(question: string, pdfFiles: PDFFile[]): string {
   // Sanitize the question
   const sanitizedQuestion = sanitizeUserInput(question);
-  
+
   // Construct document texts with size limits to prevent token overflow
   const MAX_CHARS_PER_DOC = 50000; // Reasonable limit per document
   const documentTexts = pdfFiles.map(pdf => {
-    const text = pdf.extractedText.length > MAX_CHARS_PER_DOC 
+    const text = pdf.extractedText.length > MAX_CHARS_PER_DOC
       ? pdf.extractedText.substring(0, MAX_CHARS_PER_DOC) + '\n[Content truncated due to length...]'
       : pdf.extractedText;
-    
+
     return `START OF DOCUMENT: ${sanitizeText(pdf.name)}\n${text}\nEND OF DOCUMENT: ${sanitizeText(pdf.name)}\n\n`;
   }).join('');
 
-  const prompt = `You are an expert document analyst. Analyze the provided PDF documents and answer the user's question based strictly on the content.
+  const prompt = `You are a knowledgeable AI assistant and an expert document analyst. You help users with their questions, primarily by analyzing the provided PDF documents. You are also capable of answering general questions using your broad knowledge base, such as questions about tabletop RPGs (e.g., D&D 5e).
 
 IMPORTANT RULES:
-1. ONLY use information from the provided documents
-2. If information is not in the documents, clearly state "I cannot find information about [topic] in the provided documents"
-3. ALWAYS end your response with a citation in this EXACT format: "Source: [Document Name], Page X"
-4. Use the most relevant page number for your citation
-5. Be concise but comprehensive in your answer
-6. If information spans multiple pages, cite the page with the most relevant details
-7. Format your response using markdown for better readability:
+1. ALWAYS prioritize finding the answer within the provided documents.
+2. If you find the answer in the documents, you MUST end your response with a citation in this EXACT format: "Source: [Document Name], Page X". Use the most relevant page number.
+3. If the information is NOT in the documents, you may use your general knowledge to answer the question. If you do this, clearly state that your answer is based on general knowledge and NOT the provided documents. DO NOT include a citation format.
+4. If you rely on general knowledge, be helpful and comprehensive in your answer.
+5. If information spans multiple pages, cite the page with the most relevant details.
+6. Format your response using markdown for better readability:
    - Use **bold** for important terms
    - Use bullet points (-) for lists
    - Use ### for section headers when appropriate
@@ -65,7 +64,7 @@ ${documentTexts}
 
 QUESTION: ${sanitizedQuestion}
 
-Provide your answer followed by the required citation format.`;
+Provide your answer according to the rules above.`;
 
   return prompt;
 }
@@ -91,7 +90,7 @@ export function parseAIResponse(responseText: string): {
   if (match) {
     const documentName = match[1].trim();
     const pageNumber = parseInt(match[2], 10);
-    
+
     citation = {
       documentName,
       pageNumber

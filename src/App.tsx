@@ -175,6 +175,11 @@ export const App: React.FC = () => {
     } else {
       console.warn(`Target PDF not found for citation: ${citation.documentName}`);
       console.log('Available PDFs:', appState.pdfFiles.map(pdf => ({ name: pdf.name, id: pdf.id })));
+      
+      setAppState(prev => ({
+        ...prev,
+        error: `Document "${citation.documentName}" is no longer available.`
+      }));
     }
   }, [appState.pdfFiles]);
   
@@ -345,14 +350,16 @@ export const App: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {!hasPDFs ? (
+        {!hasPDFs && appState.chatHistory.length === 0 ? (
           /* Welcome Screen */
           <WelcomeScreen onPDFUpload={handlePDFUpload} />
         ) : (
           <div className="flex-1 flex h-full min-h-0">
             {/* PDF Viewer */}
-            <div className="flex-1 bg-white/50 border-r border-slate-200/60 z-10 h-full min-h-0">
-              {activePdf ? (
+            <div className="flex-1 bg-white/50 border-r border-slate-200/60 z-10 h-full min-h-0 overflow-hidden">
+              {!hasPDFs ? (
+                <WelcomeScreen onPDFUpload={handlePDFUpload} />
+              ) : activePdf ? (
                 <PDFViewer 
                   pdfFile={activePdf}
                   targetPage={
@@ -410,6 +417,7 @@ export const App: React.FC = () => {
                 canSubmit={hasProcessedPDFs}
                 onSubmit={handleChatSubmit}
                 onCitationClick={handleCitationClick}
+                activeDocumentNames={appState.pdfFiles.map(pdf => pdf.name)}
               />
             </div>
           </div>

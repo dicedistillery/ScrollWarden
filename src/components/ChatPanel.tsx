@@ -9,18 +9,23 @@ interface ChatPanelProps {
   canSubmit: boolean;
   onSubmit: OnChatSubmit;
   onCitationClick: OnCitationClick;
+  activeDocumentNames: string[];
 }
 
 interface MessageBubbleProps {
   message: ChatMessage;
   onCitationClick: OnCitationClick;
+  activeDocumentNames: string[];
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick, activeDocumentNames }) => {
   const isUser = message.type === 'user';
+  const isDocumentActive = message.citation ? activeDocumentNames.includes(message.citation.documentName) : false;
 
   const handleCitationClick = (citation: Citation) => {
-    onCitationClick(citation);
+    if (isDocumentActive) {
+      onCitationClick(citation);
+    }
   };
 
   const formatTimestamp = (timestamp: Date) => {
@@ -49,19 +54,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onCitationClick 
             <div className={`mt-3 pt-3 border-t ${isUser ? 'border-primary-400/50' : 'border-slate-100'}`}>
               <button
                 onClick={() => {
-                  console.log(`Citation clicked: ${message.citation!.documentName}, Page ${message.citation!.pageNumber}`);
-                  handleCitationClick(message.citation!);
+                  if (isDocumentActive) {
+                    console.log(`Citation clicked: ${message.citation!.documentName}, Page ${message.citation!.pageNumber}`);
+                    handleCitationClick(message.citation!);
+                  }
                 }}
-                className={`citation-button inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] ${isUser
-                    ? 'bg-white/20 hover:bg-white/30 text-white'
-                    : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                disabled={!isDocumentActive}
+                className={`citation-button inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${!isDocumentActive
+                    ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed opacity-80 border border-slate-200'
+                    : isUser
+                      ? 'bg-white/20 hover:bg-white/30 text-white cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]'
+                      : 'bg-primary-50 text-primary-700 hover:bg-primary-100 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]'
                   }`}
-                title="Click to navigate to this page in the PDF"
+                title={isDocumentActive ? "Click to navigate to this page in the PDF" : "This document has been removed"}
               >
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                📍 {message.citation.documentName}, Page {message.citation.pageNumber}
+                📍 {message.citation.documentName}, Page {message.citation.pageNumber} {!isDocumentActive && '(Removed)'}
               </button>
             </div>
           )}
@@ -99,7 +109,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isAiThinking,
   canSubmit,
   onSubmit,
-  onCitationClick
+  onCitationClick,
+  activeDocumentNames
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isComposing, setIsComposing] = useState(false);
@@ -194,6 +205,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 key={message.id}
                 message={message}
                 onCitationClick={onCitationClick}
+                activeDocumentNames={activeDocumentNames}
               />
             ))}
 
