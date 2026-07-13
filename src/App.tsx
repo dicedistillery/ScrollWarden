@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   PDFFile, 
   ChatMessage, 
@@ -39,6 +39,7 @@ export const App: React.FC = () => {
 
   const nextMessageId = useRef(1);
   const nextPdfId = useRef(1);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const generateMessageId = (): string => {
     return `msg_${nextMessageId.current++}`;
@@ -48,14 +49,40 @@ export const App: React.FC = () => {
     return `pdf_${nextPdfId.current++}`;
   };
 
+  const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
+    const timeoutId = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(id => id !== timeoutId);
+      callback();
+    }, delay);
+    timeoutsRef.current.push(timeoutId);
+    return timeoutId;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
+
   // Handle PDF file uploads
   const handlePDFUpload: OnPDFUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
     
     // Validate file size (max 80MB per file)
     const MAX_FILE_SIZE = 80 * 1024 * 1024; // 80MB
     const MAX_TOTAL_FILES = 10;
     
+    const invalidFiles = fileArray.filter(file => file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf'));
+    if (invalidFiles.length > 0) {
+      setAppState(prev => ({
+        ...prev,
+        error: `Only PDF files are supported: ${invalidFiles.map(f => f.name).join(', ')}`
+      }));
+      return;
+    }
+
     const oversizedFiles = fileArray.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
       setAppState(prev => ({
@@ -130,7 +157,7 @@ export const App: React.FC = () => {
     
     // Wait for all PDFs to finish processing
     await Promise.allSettled(processingPromises);
-  }, []);
+  }, [appState.pdfFiles.length]);
 
   // Handle navigation to citations (both manual clicks and auto-navigation)
   const [targetPageInfo, setTargetPageInfo] = useState<{documentName: string; pageNumber: number; timestamp: number} | null>(null);
@@ -162,7 +189,7 @@ export const App: React.FC = () => {
       console.log(`Set target page info:`, { documentName: citation.documentName, pageNumber: citation.pageNumber, timestamp });
       
       // Reset the target page info after a longer delay to allow proper scrolling
-      setTimeout(() => {
+      scheduleTimeout(() => {
         setTargetPageInfo(prev => {
           // Only clear if this is the same navigation request
           if (prev && prev.timestamp === timestamp) {
@@ -181,7 +208,7 @@ export const App: React.FC = () => {
         error: `Document "${citation.documentName}" is no longer available.`
       }));
     }
-  }, [appState.pdfFiles]);
+  }, [appState.pdfFiles, scheduleTimeout]);
   
   // Handle citation clicks (manual navigation)
   const handleCitationClick: OnCitationClick = useCallback((citation: Citation) => {
@@ -193,7 +220,7 @@ export const App: React.FC = () => {
     if (!message.trim() || appState.isAiThinking) return;
 
     // Check if we have any processed PDFs
-    const processedPDFs = appState.pdfFiles.filter(pdf => !pdf.isProcessing && !pdf.error);
+    const processedPDFs = appState.pdfFiles.filter(pdf => !pdf.isProcessing && !pdf.error && pdf.extractedText);
     if (processedPDFs.length === 0) {
       setAppState(prev => ({
         ...prev,
@@ -240,7 +267,7 @@ export const App: React.FC = () => {
       if (aiResponse.citation) {
         console.log('AI response includes citation, auto-navigating...');
         // Add a small delay to allow the UI to update first
-        setTimeout(() => {
+        scheduleTimeout(() => {
           navigateToCitation(aiResponse.citation!, true);
         }, 500);
       }
@@ -329,7 +356,7 @@ export const App: React.FC = () => {
 
   // Check if we have any PDFs
   const hasPDFs = appState.pdfFiles.length > 0;
-  const hasProcessedPDFs = appState.pdfFiles.some(pdf => !pdf.isProcessing && !pdf.error);
+  const hasProcessedPDFs = appState.pdfFiles.some(pdf => !pdf.isProcessing && !pdf.error && pdf.extractedText);
 
   return (
     <div className="flex h-screen w-full sm:p-4 lg:p-6 xl:p-8">

@@ -185,17 +185,18 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isU
     let keyCounter = 0;
 
     while (remainingText.length > 0) {
-      let earliestMatch: { index: number; length: number; element: React.ReactNode } | null = null;
+      type InlineMatch = { index: number; length: number; element: React.ReactNode };
+      let earliestMatch: InlineMatch | null = null;
 
       // Find the earliest match among all patterns
-      patterns.forEach(pattern => {
+      for (const pattern of patterns) {
         pattern.regex.lastIndex = 0; // Reset regex
         const match = pattern.regex.exec(remainingText);
         if (match && (earliestMatch === null || match.index < earliestMatch.index)) {
           const element = pattern.component(
-            match[0], 
-            match[1], 
-            keyCounter++, 
+            match[0],
+            match[1],
+            keyCounter++,
             match[2] // For links, this will be the URL
           );
           earliestMatch = {
@@ -204,19 +205,20 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isU
             element
           };
         }
-      });
+      }
 
-      if (earliestMatch) {
+      const matchToRender = earliestMatch;
+      if (matchToRender) {
         // Add text before the match
-        if (earliestMatch.index > 0) {
-          parts.push(remainingText.substring(0, earliestMatch.index));
+        if (matchToRender.index > 0) {
+          parts.push(remainingText.substring(0, matchToRender.index));
         }
         
         // Add the formatted element
-        parts.push(earliestMatch.element);
+        parts.push(matchToRender.element);
         
         // Continue with text after the match
-        remainingText = remainingText.substring(earliestMatch.index + earliestMatch.length);
+        remainingText = remainingText.substring(matchToRender.index + matchToRender.length);
       } else {
         // No more matches, add remaining text
         parts.push(remainingText);
