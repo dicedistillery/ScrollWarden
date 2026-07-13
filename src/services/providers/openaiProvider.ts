@@ -5,7 +5,7 @@ export const openaiConfig: AIProviderConfig = {
   name: 'OpenAI GPT',
   apiUrl: 'https://api.openai.com/v1/chat/completions',
   model: 'gpt-4o-mini-2024-07-18', // Updated to a valid model name
-  maxTokens: 120000,
+  maxTokens: 4096,
   temperature: 1
 };
 

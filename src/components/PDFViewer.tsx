@@ -156,7 +156,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [viewerState, setViewerState] = useState<PDFViewerState>({
     scale: 1.0,

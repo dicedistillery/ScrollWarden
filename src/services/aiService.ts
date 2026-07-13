@@ -22,6 +22,11 @@ export function getCurrentAIProvider(): AIProviderType {
  * Mock AI response for development/demo purposes
  * In a real implementation, replace this with actual AI API calls
  */
+function getRandomPage(pdf?: PDFFile): number {
+  const totalPages = Math.max(1, pdf?.pages || 1);
+  return Math.floor(Math.random() * totalPages) + 1;
+}
+
 function createMockAIResponse(question: string, pdfFiles: PDFFile[]): AIResponse {
   const providerName = getProvider(selectedProvider).config.name;
   const responses = [
@@ -37,7 +42,7 @@ Based on the documents provided (analyzed by **${providerName}**), I can provide
 This analysis covers the main aspects relevant to your question with supporting information from the source material.`,
       citation: {
         documentName: pdfFiles[0]?.name || 'document.pdf',
-        pageNumber: Math.floor(Math.random() * 10) + 1
+        pageNumber: getRandomPage(pdfFiles[0])
       }
     },
     {
@@ -51,8 +56,8 @@ The document indicates that this topic is discussed in **comprehensive detail** 
 
 *Note: This information spans multiple sections of the document for thorough coverage.*`,
       citation: {
-        documentName: pdfFiles[Math.floor(Math.random() * pdfFiles.length)]?.name || 'document.pdf',
-        pageNumber: Math.floor(Math.random() * 20) + 1
+        documentName: pdfFiles[0]?.name || 'document.pdf',
+        pageNumber: getRandomPage(pdfFiles[0])
       }
     },
     {
@@ -65,7 +70,7 @@ The document indicates that this topic is discussed in **comprehensive detail** 
 The document provides **comprehensive coverage** of this topic with detailed explanations and practical examples.`,
       citation: {
         documentName: pdfFiles[0]?.name || 'document.pdf',
-        pageNumber: Math.floor(Math.random() * 15) + 1
+        pageNumber: getRandomPage(pdfFiles[0])
       }
     }
   ];
@@ -121,9 +126,6 @@ export async function queryAI(question: string, pdfFiles: PDFFile[]): Promise<AI
   }
 
   try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 2000));
-
     // Get current provider and API key
     const provider = getProvider(selectedProvider);
     const apiKey = getAPIKey(selectedProvider);

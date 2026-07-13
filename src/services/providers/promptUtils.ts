@@ -35,10 +35,11 @@ export function constructAIPrompt(question: string, pdfFiles: PDFFile[]): string
   const sanitizedQuestion = sanitizeUserInput(question);
 
   // Construct document texts with size limits to prevent token overflow
-  const MAX_CHARS_PER_DOC = 50000; // Reasonable limit per document
+  const MAX_TOTAL_DOC_CHARS = 80000;
+  const maxCharsPerDoc = Math.max(8000, Math.floor(MAX_TOTAL_DOC_CHARS / Math.max(1, pdfFiles.length)));
   const documentTexts = pdfFiles.map(pdf => {
-    const text = pdf.extractedText.length > MAX_CHARS_PER_DOC
-      ? pdf.extractedText.substring(0, MAX_CHARS_PER_DOC) + '\n[Content truncated due to length...]'
+    const text = pdf.extractedText.length > maxCharsPerDoc
+      ? pdf.extractedText.substring(0, maxCharsPerDoc) + '\n[Content truncated due to length...]'
       : pdf.extractedText;
 
     return `START OF DOCUMENT: ${sanitizeText(pdf.name)}\n${text}\nEND OF DOCUMENT: ${sanitizeText(pdf.name)}\n\n`;
@@ -81,15 +82,15 @@ export function parseAIResponse(responseText: string): {
   };
 } {
   // Look for citation pattern: "Source: [Document Name], Page X"
-  const citationRegex = /Source:\s*([^,]+),\s*Page\s*(\d+)/i;
+  const citationRegex = /Source:\s*(?:\[([^\]]+)\]|(.+)),\s*Page\s*(\d+)/i;
   const match = responseText.match(citationRegex);
 
   let citation: { documentName: string; pageNumber: number } | undefined;
   let content = responseText;
 
   if (match) {
-    const documentName = match[1].trim();
-    const pageNumber = parseInt(match[2], 10);
+    const documentName = (match[1] || match[2]).trim();
+    const pageNumber = parseInt(match[3], 10);
 
     citation = {
       documentName,

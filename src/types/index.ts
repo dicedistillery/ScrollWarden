@@ -68,7 +68,7 @@ export interface AIProvider {
 declare global {
   interface Window {
     pdfjsLib: {
-      getDocument: (src: string | Uint8Array) => Promise<PDFDocumentProxy>;
+      getDocument: (src: string | Uint8Array) => PDFLoadingTask;
       GlobalWorkerOptions: {
         workerSrc: string;
       };
@@ -76,9 +76,16 @@ declare global {
   }
 }
 
+export interface PDFLoadingTask {
+  promise: Promise<PDFDocumentProxy>;
+  destroy?: () => Promise<void>;
+}
+
 export interface PDFDocumentProxy {
   numPages: number;
   getPage: (pageNumber: number) => Promise<PDFPageProxy>;
+  cleanup: () => Promise<void>;
+  destroy: () => Promise<void>;
 }
 
 export interface PDFPageProxy {
@@ -86,8 +93,13 @@ export interface PDFPageProxy {
   render: (params: {
     canvasContext: CanvasRenderingContext2D;
     viewport: PDFPageViewport;
-  }) => { promise: Promise<void> };
+  }) => PDFRenderTask;
   getTextContent: () => Promise<{ items: Array<{ str: string }> }>;
+}
+
+export interface PDFRenderTask {
+  promise: Promise<void>;
+  cancel: () => void;
 }
 
 export interface PDFPageViewport {
