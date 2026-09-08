@@ -30,7 +30,10 @@ async function extractPageText(page: PDFPageProxy, pageNumber: number): Promise<
 /**
  * Processes a PDF file and extracts all text content with page markers
  */
-export async function processPDFFile(file: File): Promise<ProcessedPDFData> {
+export async function processPDFFile(
+  file: File,
+  onProgress?: (completedPages: number, totalPages: number) => void
+): Promise<ProcessedPDFData> {
   if (!file || file.type !== 'application/pdf') {
     throw new Error('Invalid file type. Please provide a PDF file.');
   }
@@ -48,23 +51,25 @@ export async function processPDFFile(file: File): Promise<ProcessedPDFData> {
       throw new Error('PDF file appears to be empty or corrupted.');
     }
 
-    let extractedText = '';
+    // An array avoids repeatedly copying the entire accumulated document as it grows.
+    const extractedPages: string[] = new Array(totalPages);
 
     // Process each page sequentially to maintain order
     for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
       try {
         const page = await pdfDocument.getPage(pageNumber);
         const pageText = await extractPageText(page, pageNumber);
-        extractedText += pageText;
+        extractedPages[pageNumber - 1] = pageText;
       } catch (error) {
         console.error(`Error processing page ${pageNumber}:`, error);
         // Continue with other pages even if one fails
-        extractedText += `[Page ${pageNumber}]\n[Error: Could not process this page]\n\n`;
+        extractedPages[pageNumber - 1] = `[Page ${pageNumber}]\n[Error: Could not process this page]\n\n`;
       }
+      onProgress?.(pageNumber, totalPages);
     }
 
     // Clean up the extracted text
-    extractedText = cleanExtractedText(extractedText);
+    const extractedText = cleanExtractedText(extractedPages.join(''));
 
     // Clean up the PDF document to free memory
     try {
@@ -102,9 +107,7 @@ export async function processPDFFile(file: File): Promise<ProcessedPDFData> {
  */
 function cleanExtractedText(text: string): string {
   return text
-    // Remove excessive whitespace
-    .replace(/\s+/g, ' ')
-    // Remove excessive line breaks
+    .replace(/[^\S\r\n]+/g, ' ')
     .replace(/\n\s*\n\s*\n/g, '\n\n')
     // Trim each line
     .split('\n')

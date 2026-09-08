@@ -93,8 +93,23 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
     }
   }, [isVisible, scale, renderPage, isRendering]);
 
+  // Canvas bitmaps are the dominant memory cost for long PDFs. Release pages as
+  // soon as they leave the small render window; they can be rendered again later.
+  useEffect(() => {
+    if (!isVisible) {
+      renderTaskRef.current?.cancel();
+      renderTaskRef.current = null;
+      renderedScaleRef.current = null;
+      if (canvasRef.current) {
+        canvasRef.current.width = 0;
+        canvasRef.current.height = 0;
+      }
+    }
+  }, [isVisible]);
+
   // Cleanup on unmount - cancel any pending render tasks
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       if (renderTaskRef.current) {
@@ -105,7 +120,7 @@ const PDFPageComponent: React.FC<PDFPageComponentProps> = ({
     };
   }, [pageNumber]);
 
-  if (!isVisible && renderedScaleRef.current === null) {
+  if (!isVisible) {
     return (
       <div
         className="flex justify-center p-8 bg-slate-50/50 min-h-[800px]"
@@ -168,6 +183,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
+  const intersectingPagesRef = useRef<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -263,27 +279,23 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
           clearTimeout(debounceTimerRef.current);
         }
 
+        entries.forEach(entry => {
+          const pageNumber = Number(entry.target.getAttribute('data-page-number'));
+          if (entry.isIntersecting) intersectingPagesRef.current.add(pageNumber);
+          else intersectingPagesRef.current.delete(pageNumber);
+        });
+
         debounceTimerRef.current = setTimeout(() => {
-          let hasChanges = false;
-          const newVisiblePages = new Set(visiblePages);
-
-          entries.forEach((entry) => {
-            const pageNumber = parseInt(entry.target.getAttribute('data-page-number') || '0');
-
-            if (entry.isIntersecting) {
-              // Only add current page and immediate neighbors
-              for (let i = Math.max(1, pageNumber - 1); i <= Math.min(viewerState.totalPages, pageNumber + 1); i++) {
-                if (!newVisiblePages.has(i)) {
-                  newVisiblePages.add(i);
-                  hasChanges = true;
-                }
-              }
+          const renderWindow = new Set<number>();
+          intersectingPagesRef.current.forEach(pageNumber => {
+            for (let i = Math.max(1, pageNumber - 1); i <= Math.min(viewerState.totalPages, pageNumber + 1); i++) {
+              renderWindow.add(i);
             }
           });
-
-          if (hasChanges) {
-            setVisiblePages(newVisiblePages);
-          }
+          setVisiblePages(previous => {
+            if (previous.size === renderWindow.size && [...previous].every(page => renderWindow.has(page))) return previous;
+            return renderWindow;
+          });
 
           // Update current page based on which page is most visible
           const visibleEntries = entries.filter(entry => entry.isIntersecting);
@@ -325,7 +337,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
         observerRef.current.disconnect();
       }
     };
-  }, [document, viewerState.totalPages, visiblePages]);
+  }, [document, viewerState.totalPages]);
 
   useEffect(() => {
     const cleanup = setupIntersectionObserver();
@@ -351,6 +363,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ pdfFile, targetPage }) => 
 
       // Clear page refs
       pageRefs.current.clear();
+      intersectingPagesRef.current.clear();
     };
   }, []);
 

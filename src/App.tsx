@@ -109,6 +109,7 @@ export const App: React.FC = () => {
       pages: 0,
       extractedText: '',
       isProcessing: true,
+      processingProgress: 0,
       error: undefined
     }));
 
@@ -120,10 +121,19 @@ export const App: React.FC = () => {
       error: null
     }));
 
-    // Process PDFs in parallel for better performance
-    const processingPromises = newPDFs.map(async (pdfFile) => {
+    // Keep only two PDF.js documents active at once. Loading every large upload in
+    // parallel can briefly consume several times the files' combined size.
+    const processOne = async (pdfFile: PDFFile) => {
       try {
-        const processedData = await processPDFFile(pdfFile.file);
+        const processedData = await processPDFFile(pdfFile.file, (completed, total) => {
+          const processingProgress = Math.round((completed / total) * 100);
+          setAppState(prev => ({
+            ...prev,
+            pdfFiles: prev.pdfFiles.map(pdf =>
+              pdf.id === pdfFile.id ? { ...pdf, pages: total, processingProgress } : pdf
+            )
+          }));
+        });
         
         setAppState(prev => ({
           ...prev,
@@ -133,7 +143,8 @@ export const App: React.FC = () => {
                   ...pdf,
                   pages: processedData.totalPages,
                   extractedText: processedData.extractedText,
-                  isProcessing: false
+                  isProcessing: false,
+                  processingProgress: 100
                 }
               : pdf
           )
@@ -153,10 +164,16 @@ export const App: React.FC = () => {
           )
         }));
       }
-    });
-    
-    // Wait for all PDFs to finish processing
-    await Promise.allSettled(processingPromises);
+    };
+
+    const workerCount = Math.min(2, newPDFs.length);
+    let nextIndex = 0;
+    await Promise.all(Array.from({ length: workerCount }, async () => {
+      while (nextIndex < newPDFs.length) {
+        const pdf = newPDFs[nextIndex++];
+        await processOne(pdf);
+      }
+    }));
   }, [appState.pdfFiles.length]);
 
   // Handle navigation to citations (both manual clicks and auto-navigation)

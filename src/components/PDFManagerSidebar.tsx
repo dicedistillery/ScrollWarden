@@ -210,6 +210,19 @@ export const PDFManagerSidebar: React.FC<PDFManagerSidebarProps> = ({
                                   {pdf.pages} pages • {formatFileSize(pdf.file.size)}
                                 </p>
                               )}
+                              {pdf.isProcessing && (
+                                <div className="mt-2" aria-label={`Processing ${pdf.processingProgress ?? 0}%`}>
+                                  <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+                                    <div
+                                      className="h-full rounded-full bg-primary-500 transition-[width] duration-200"
+                                      style={{ width: `${pdf.processingProgress ?? 0}%` }}
+                                    />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-slate-500">
+                                    Extracting text… {pdf.processingProgress ?? 0}%
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
 

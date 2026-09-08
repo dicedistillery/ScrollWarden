@@ -7,6 +7,7 @@ export interface PDFFile {
   pages: number;
   extractedText: string;
   isProcessing: boolean;
+  processingProgress?: number;
   error?: string;
 }
 

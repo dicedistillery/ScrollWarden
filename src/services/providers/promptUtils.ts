@@ -26,6 +26,68 @@ export function sanitizeUserInput(input: string): string {
   return sanitized;
 }
 
+interface DocumentChunk {
+  documentName: string;
+  pageNumber: number;
+  text: string;
+  score: number;
+}
+
+const MAX_CONTEXT_CHARS = 60000;
+const MAX_PAGE_CHARS = 12000;
+const STOP_WORDS = new Set(['about', 'after', 'again', 'also', 'could', 'from', 'have', 'into', 'more', 'that', 'their', 'there', 'these', 'they', 'this', 'what', 'when', 'where', 'which', 'with', 'would', 'your']);
+
+/** Selects question-relevant pages instead of always sending the beginning of a document. */
+export function selectRelevantDocumentContext(question: string, pdfFiles: PDFFile[]): string {
+  const terms = Array.from(new Set(
+    sanitizeUserInput(question).toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []
+  )).filter(term => !STOP_WORDS.has(term));
+  const chunks: DocumentChunk[] = [];
+
+  pdfFiles.forEach(pdf => {
+    const matches = Array.from(pdf.extractedText.matchAll(/\[Page\s+(\d+)\]\s*([\s\S]*?)(?=\[Page\s+\d+\]|$)/gi));
+    const pages = matches.length > 0
+      ? matches.map(match => ({ pageNumber: Number(match[1]), text: match[2].trim() }))
+      : [{ pageNumber: 1, text: pdf.extractedText }];
+
+    pages.forEach(page => {
+      const normalized = page.text.toLocaleLowerCase();
+      const score = terms.reduce((total, term) => {
+        let occurrences = 0;
+        let offset = normalized.indexOf(term);
+        while (offset !== -1 && occurrences < 20) {
+          occurrences++;
+          offset = normalized.indexOf(term, offset + term.length);
+        }
+        return total + occurrences;
+      }, 0);
+      chunks.push({ documentName: pdf.name, pageNumber: page.pageNumber, text: page.text, score });
+    });
+  });
+
+  chunks.sort((a, b) => b.score - a.score || a.pageNumber - b.pageNumber);
+  // When no lexical match exists, sample from across each document rather than
+  // silently restricting the model to its opening pages.
+  const candidates = chunks.some(chunk => chunk.score > 0)
+    ? chunks
+    : pdfFiles.flatMap(pdf => {
+        const own = chunks.filter(chunk => chunk.documentName === pdf.name);
+        return own.filter((_, index) => index === 0 || index === own.length - 1 || index % Math.max(1, Math.floor(own.length / 4)) === 0);
+      });
+
+  let used = 0;
+  const selected: string[] = [];
+  for (const chunk of candidates) {
+    const safeText = chunk.text.slice(0, MAX_PAGE_CHARS);
+    const block = `Document: ${sanitizeText(chunk.documentName)} | Page ${chunk.pageNumber}\n${safeText}\n`;
+    if (used + block.length > MAX_CONTEXT_CHARS) continue;
+    selected.push(block);
+    used += block.length;
+    if (used >= MAX_CONTEXT_CHARS * 0.9) break;
+  }
+  return selected.join('\n');
+}
+
 /**
  * Constructs a detailed prompt for AI providers to answer questions based on PDF content
  * This shared implementation ensures consistency across all providers
@@ -34,16 +96,7 @@ export function constructAIPrompt(question: string, pdfFiles: PDFFile[]): string
   // Sanitize the question
   const sanitizedQuestion = sanitizeUserInput(question);
 
-  // Construct document texts with size limits to prevent token overflow
-  const MAX_TOTAL_DOC_CHARS = 80000;
-  const maxCharsPerDoc = Math.max(8000, Math.floor(MAX_TOTAL_DOC_CHARS / Math.max(1, pdfFiles.length)));
-  const documentTexts = pdfFiles.map(pdf => {
-    const text = pdf.extractedText.length > maxCharsPerDoc
-      ? pdf.extractedText.substring(0, maxCharsPerDoc) + '\n[Content truncated due to length...]'
-      : pdf.extractedText;
-
-    return `START OF DOCUMENT: ${sanitizeText(pdf.name)}\n${text}\nEND OF DOCUMENT: ${sanitizeText(pdf.name)}\n\n`;
-  }).join('');
+  const documentTexts = selectRelevantDocumentContext(sanitizedQuestion, pdfFiles);
 
   const prompt = `You are a knowledgeable AI assistant and an expert document analyst. You help users with their questions, primarily by analyzing the provided PDF documents. You are also capable of answering general questions using your broad knowledge base, such as questions about tabletop RPGs (e.g., D&D 5e).
 
