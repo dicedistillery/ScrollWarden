@@ -169,10 +169,10 @@ The modular architecture makes it easy to extend:
 
 ### Performance Considerations
 
-- **Lazy Loading**: PDF pages only render when visible
-- **Aggressive Pre-loading**: Pages near viewport are pre-rendered
-- **Canvas Optimization**: Efficient canvas management for memory usage
-- **Text Extraction**: Processes PDFs incrementally with progress feedback
+- **Bounded rendering**: Only the visible page and its immediate neighbors keep canvas bitmaps in memory
+- **Bounded processing**: At most two uploaded PDFs are extracted concurrently to avoid memory spikes
+- **Relevant-page retrieval**: Questions select matching pages from anywhere in long documents instead of truncating to the opening pages
+- **Linear text assembly**: Extracted pages are joined once and processing progress is shown in the sidebar
 
 ### Browser Compatibility
 
